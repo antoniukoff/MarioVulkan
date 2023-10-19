@@ -11,10 +11,13 @@
 
 Scene0::Scene0(Renderer *renderer_): 
 	Scene(nullptr),renderer(renderer_), camera(nullptr) {
-	light1 = LightActor(Vec4(-6.0f, 5.0f, -3.0f, 1.0f), Vec4(1.0f, 0.5f, 0.0f, 1.0f));
-	light = LightActor(Vec4(3.0f, -2.0f, -2.0f, 1.0f), Vec4(0.4f, 0.5f, 0.4f, 1.0f));
+	light1 = LightActor(Vec4(-6.0f, 5.0f, -3.0f, 1.0f), Vec4(1.0f, 0.0f, 1.0f, 1.0f) * 5);
+	light = LightActor(Vec4(-6.0f, -5.0f, -3.0f, 1.0f), Vec4(0.0, 0.0f, 1.0f, 1.0f) * 5);
+	light2 = LightActor(Vec4(6.0f, 5.0f, -3.0f, 1.0f), Vec4(0.0f, 1.0f, 0.0f, 1.0f) * 5);
 	lightData.position.push_back(light.GetPosition());
 	lightData.color.push_back(light.GetColor());
+	lightData.position.push_back(light2.GetPosition());
+	lightData.color.push_back(light2.GetColor());
 	lightData.position.push_back(light1.GetPosition());
 	lightData.color.push_back(light1.GetColor());
 	camera = new Camera();

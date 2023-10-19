@@ -2,9 +2,9 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 layout (location = 0) in vec3 vertNormal;
-layout (location = 1) in vec3 lightDir[2];
-layout (location = 3) in vec3 eyeDir; 
-layout (location = 4) in vec2 texCoords;
+layout (location = 1) in vec3 lightDir[3];
+layout (location = 4) in vec3 eyeDir; 
+layout (location = 5) in vec2 texCoords;
 
 struct Light {
     vec4 position;
@@ -21,7 +21,7 @@ layout(location = 0) out vec4 fragColor;
 
 void main() { 
 	vec4 colorOutput = vec4(0, 0, 0, 1);
-	for(int i = 0; i < 2; i++){
+	for(int i = 0; i < 3; i++){
 
 	 vec4 ks = gLights.lights[i].diffuse;
 	vec4 kTexture = texture(myTexture,texCoords);

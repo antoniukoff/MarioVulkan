@@ -1021,7 +1021,7 @@ void VulkanRenderer::createCameraUniformBuffers() {
 }
 
 void VulkanRenderer::createLightUniformBuffers() {
-    VkDeviceSize bufferSize = sizeof(GLightsUBO);
+    VkDeviceSize bufferSize = sizeof(lightUBO);
 
     lightBuffers.resize(swapChainImages.size());
 

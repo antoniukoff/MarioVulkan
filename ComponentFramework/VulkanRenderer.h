@@ -272,7 +272,7 @@ private:
     std::vector<VkFramebuffer> swapChainFramebuffers;
     
     CameraUBO cameraUBO;
-    std::array<GLightsUBO, 2> lightUBO;
+    std::array<GLightsUBO, 3> lightUBO;
     
 
     VkShaderModule createShaderModule(const std::vector<char>& code);

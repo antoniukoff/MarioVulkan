@@ -19,6 +19,7 @@ private:
 	LightData lightData;
 	LightActor light;
 	LightActor light1;
+	LightActor light2;
 public:
 	explicit Scene0(Renderer* renderer_);
 	virtual ~Scene0();

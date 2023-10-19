@@ -17,13 +17,13 @@ struct Light {
 };
 
 layout (binding = 1) uniform GlobalLighting {
-    Light lights[2];
+    Light lights[3];
 } gLights;
 
 layout (location = 0) out vec3 vertNormal;
-layout (location = 1) out vec3 lightDir[2];
-layout (location = 3) out vec3 eyeDir; 
-layout (location = 4) out vec2 texCoords;
+layout (location = 1) out vec3 lightDir[3];
+layout (location = 4) out vec3 eyeDir; 
+layout (location = 5) out vec2 texCoords;
 
 void main() {
     texCoords = uvCoords;
@@ -38,7 +38,7 @@ void main() {
     eyeDir = -vertDir;
 
     // Compute light directions
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
         lightDir[i] = normalize(gLights.lights[i].position.xyz - vertPos);
     }
 
