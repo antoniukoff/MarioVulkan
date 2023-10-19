@@ -138,7 +138,7 @@ public:
     void OnDestroy();
     void Render();
     void SetCameraUBO(const Matrix4& projection, const Matrix4& view, const Matrix4& model);
-    void SetLightUBO(const Vec4& position, const Vec4& diffuse);
+    void SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse);
     SDL_Window* GetWindow() { return window; }
     void CreateTextureImage();
     void CreateGraphicsPipeline(const char* vertFile, const char* fragFile);
@@ -272,7 +272,7 @@ private:
     std::vector<VkFramebuffer> swapChainFramebuffers;
     
     CameraUBO cameraUBO;
-    GLightsUBO lightUBO;
+    std::array<GLightsUBO, 2> lightUBO;
     
 
     VkShaderModule createShaderModule(const std::vector<char>& code);

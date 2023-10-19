@@ -1072,7 +1072,7 @@ void VulkanRenderer::createDescriptorSets() {
         VkDescriptorBufferInfo lightBufferInfo{};
         lightBufferInfo.buffer = lightBuffers[i].bufferID;
         lightBufferInfo.offset = 0;
-        lightBufferInfo.range = sizeof(GLightsUBO);
+        lightBufferInfo.range = sizeof(lightUBO);
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1282,23 +1282,26 @@ void VulkanRenderer::SetCameraUBO(const Matrix4& projection, const Matrix4& view
     cameraUBO.proj[5] *= -1.0f;
 }
 
-void VulkanRenderer::SetLightUBO(const Vec4& position, const Vec4& diffuse) {
-    lightUBO.position = position;
-    lightUBO.diffuse = diffuse;
-}
-void VulkanRenderer::updateCameraUniformBuffer(uint32_t currentImage) {
-    void* data;
-    vkMapMemory(device, cameraBuffers[currentImage].memoryBuffer, 0, sizeof(cameraUBO), 0, &data);
-    memcpy(data, &cameraUBO, sizeof(cameraUBO));
-    vkUnmapMemory(device, cameraBuffers[currentImage].memoryBuffer);
+void VulkanRenderer::SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse) {
+    for (int i = 0; i < lightUBO.size(); i++) {
+        lightUBO[i].position = position[i];
+        lightUBO[i].diffuse = diffuse[i];
+    }
 }
 
 
 void VulkanRenderer::updateLightUniformBuffer(uint32_t currentImage) {
     void* data;
     vkMapMemory(device, lightBuffers[currentImage].memoryBuffer, 0, sizeof(lightUBO), 0, &data);
-    memcpy(data, &lightUBO, sizeof(lightUBO));
+    memcpy(data, lightUBO.data(), sizeof(lightUBO));
     vkUnmapMemory(device, lightBuffers[currentImage].memoryBuffer);
+}
+
+void VulkanRenderer::updateCameraUniformBuffer(uint32_t currentImage) {
+    void* data;
+    vkMapMemory(device, cameraBuffers[currentImage].memoryBuffer, 0, sizeof(cameraUBO), 0, &data);
+    memcpy(data, &cameraUBO, sizeof(cameraUBO));
+    vkUnmapMemory(device, cameraBuffers[currentImage].memoryBuffer);
 }
 
 VkShaderModule VulkanRenderer::createShaderModule(const std::vector<char>& code) {

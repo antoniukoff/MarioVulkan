@@ -11,27 +11,36 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
 } ubo;
 
-layout (binding = 1) uniform GlobalLighting{
-	vec4 lightPos;
-	vec4 diffuse;
+struct Light {
+    vec4 position;
+    vec4 diffuse;
+};
+
+layout (binding = 1) uniform GlobalLighting {
+    Light lights[2];
 } gLights;
 
 layout (location = 0) out vec3 vertNormal;
-layout (location = 1) out vec3 lightDir;
-layout (location = 2) out vec3 eyeDir; 
-layout (location = 3) out vec2 texCoords;
+layout (location = 1) out vec3 lightDir[2];
+layout (location = 3) out vec3 eyeDir; 
+layout (location = 4) out vec2 texCoords;
 
-
-/// how does the alignment work when passing from the cpu to gpu
 void main() {
-	texCoords = uvCoords;
-	/// why do we make a normal martrix
-	mat3 normalMatrix = mat3(inverse(transpose(ubo.model)));
-	vertNormal = normalize(normalMatrix * vNormal.xyz); /// Rotate the normal to the correct orientation 
-	vec3 vertPos = vec3(ubo.view * ubo.model * vVertex); /// This is the position of the vertex from the origin
-	vec3 vertDir = normalize(vertPos);
-	eyeDir = -vertDir;
-	lightDir = normalize(gLights.lightPos.xyz - vertPos); /// Create the light direction.
-	
-	gl_Position =  ubo.proj * ubo.view * ubo.model * vVertex; 
+    texCoords = uvCoords;
+
+    // Compute the normal matrix
+    mat3 normalMatrix = mat3(inverse(transpose(ubo.model)));
+    vertNormal = normalize(normalMatrix * vNormal.xyz);
+
+    // Compute vertex position and direction
+    vec3 vertPos = vec3(ubo.view * ubo.model * vVertex);
+    vec3 vertDir = normalize(vertPos);
+    eyeDir = -vertDir;
+
+    // Compute light directions
+    for (int i = 0; i < 2; i++) {
+        lightDir[i] = normalize(gLights.lights[i].position.xyz - vertPos);
+    }
+
+    gl_Position = ubo.proj * ubo.view * ubo.model * vVertex;
 }
