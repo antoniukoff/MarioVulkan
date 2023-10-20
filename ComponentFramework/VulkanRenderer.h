@@ -113,7 +113,6 @@ struct QueueFamilyIndices {
 
  
 struct CameraUBO {
-    Matrix4 model;
     Matrix4 view;
     Matrix4 proj;
 };
@@ -121,6 +120,10 @@ struct CameraUBO {
 struct GLightsUBO {
     Vec4 position;
     Vec4 diffuse;
+};
+struct PushConstant {
+    Matrix4 modelMatrix;
+    Matrix4 normalMatrix;
 };
 
 class VulkanRenderer : public Renderer {
@@ -137,7 +140,8 @@ public:
     bool OnCreate();
     void OnDestroy();
     void Render();
-    void SetCameraUBO(const Matrix4& projection, const Matrix4& view, const Matrix4& model);
+    void SetCameraUBO(const Matrix4& projection, const Matrix4& view);
+    void SetPushConstants(const Matrix4& model, const Matrix4& normal);
     void SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse);
     SDL_Window* GetWindow() { return window; }
     void CreateTextureImage();
@@ -272,6 +276,7 @@ private:
     std::vector<VkFramebuffer> swapChainFramebuffers;
     
     CameraUBO cameraUBO;
+    PushConstant constants;
     std::array<GLightsUBO, 3> lightUBO;
     
 

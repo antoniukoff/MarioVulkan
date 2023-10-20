@@ -11,9 +11,9 @@
 
 Scene0::Scene0(Renderer *renderer_): 
 	Scene(nullptr),renderer(renderer_), camera(nullptr) {
-	light1 = LightActor(Vec4(-6.0f, 5.0f, -3.0f, 1.0f), Vec4(1.0f, 0.0f, 1.0f, 1.0f) * 5);
-	light = LightActor(Vec4(-6.0f, -5.0f, -3.0f, 1.0f), Vec4(0.0, 0.0f, 1.0f, 1.0f) * 5);
-	light2 = LightActor(Vec4(6.0f, 5.0f, -3.0f, 1.0f), Vec4(0.0f, 1.0f, 0.0f, 1.0f) * 5);
+	light1 = LightActor(Vec4(-6.0f, 5.0f, -3.0f, 1.0f), Vec4(1.0f, 0.0f, 1.0f, 1.0f));
+	light = LightActor(Vec4(-6.0f, -5.0f, -3.0f, 1.0f), Vec4(0.0, 0.0f, 1.0f, 1.0f));
+	light2 = LightActor(Vec4(6.0f, 5.0f, -3.0f, 1.0f), Vec4(0.0f, 1.0f, 0.0f, 1.0f));
 	lightData.position.push_back(light.GetPosition());
 	lightData.color.push_back(light.GetColor());
 	lightData.position.push_back(light2.GetPosition());
@@ -38,7 +38,7 @@ bool Scene0::OnCreate() {
 		SDL_GetWindowSize(dynamic_cast<VulkanRenderer*>(renderer)->GetWindow(), &width, &height);
 		aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 		camera->Perspective(90.0f, aspectRatio, 0.5f, 20.0f);
-		camera->LookAt(Vec3(0.0f, 0.0f, 3.0f), Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f));
+		camera->LookAt(Vec3(0.0f, 0.0f, -2.0f), Vec3(0.0f, 0.0f, -1.0f), Vec3(0.0f, 1.0f, 0.0f));
 
 		break;
 
@@ -62,20 +62,23 @@ void Scene0::HandleEvents(const SDL_Event& sdlEvent) {
 	}
 }
 void Scene0::Update(const float deltaTime) {
-	static float elapsedTime = 0.0f;
+	static float elapsedTime = 10;
 	elapsedTime += deltaTime;
 	mariosModelMatrix = MMath::rotate(elapsedTime * 90.0f, Vec3(0.0f, 1.0f, 0.0f));
+
 }
 
 void Scene0::Render() const {
-	
+	Matrix4 normalMatrix = (MMath::inverse(MMath::transpose(mariosModelMatrix)));
 	switch (renderer->getRendererType()) {
 
 	case RendererType::VULKAN:
 		VulkanRenderer* vRenderer;
 		vRenderer = dynamic_cast<VulkanRenderer*>(renderer);
-		vRenderer->SetCameraUBO(camera->GetProjectionMatrix(), camera->GetViewMatrix(), mariosModelMatrix);
+		vRenderer->SetCameraUBO(camera->GetProjectionMatrix(), camera->GetViewMatrix());
 		vRenderer->SetLightUBO(lightData.position, lightData.color);
+		
+		vRenderer->SetPushConstants(mariosModelMatrix, normalMatrix);
 		vRenderer->Render();
 		break;
 

@@ -69,7 +69,6 @@ void VulkanRenderer::Render() {
     VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
-
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
     if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
@@ -634,6 +633,12 @@ void VulkanRenderer::CreateGraphicsPipeline(const char* vertFile, const char* fr
     colorBlending.blendConstants[3] = 0.0f;
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    VkPushConstantRange push_constant{};
+    push_constant.offset = 0;
+    push_constant.size = sizeof(PushConstant);
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pipelineLayoutInfo.pPushConstantRanges = &push_constant;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
@@ -1237,6 +1242,9 @@ void VulkanRenderer::createCommandBuffers() {
 
         VkBuffer vertexBuffers[] = { vertexBuffer.bufferID };
         VkDeviceSize offsets[] = { 0 };
+
+        vkCmdPushConstants(commandBuffers[i], pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &constants);
+
         vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
         vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer.bufferID, 0, VK_INDEX_TYPE_UINT32);
@@ -1246,6 +1254,8 @@ void VulkanRenderer::createCommandBuffers() {
         vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffers[i]);
+
+
 
         if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
@@ -1275,11 +1285,15 @@ void VulkanRenderer::createSyncObjects() {
     }
 }
 
-void VulkanRenderer::SetCameraUBO(const Matrix4& projection, const Matrix4& view, const Matrix4& model) {
+void VulkanRenderer::SetCameraUBO(const Matrix4& projection, const Matrix4& view) {
     cameraUBO.proj = projection;
     cameraUBO.view = view;
-    cameraUBO.model = model;
     cameraUBO.proj[5] *= -1.0f;
+}
+
+void VulkanRenderer::SetPushConstants(const Matrix4& model, const Matrix4& normal) {
+    constants.modelMatrix = model;
+    constants.normalMatrix = normal;
 }
 
 void VulkanRenderer::SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse) {
