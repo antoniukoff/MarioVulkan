@@ -12,7 +12,7 @@ struct Light {
 };
 
 layout (binding = 1) uniform GlobalLighting {
-    Light lights[2];
+    Light lights[3];
 } gLights;
 
 layout (binding = 2) uniform sampler2D myTexture;

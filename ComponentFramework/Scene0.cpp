@@ -38,7 +38,7 @@ bool Scene0::OnCreate() {
 		SDL_GetWindowSize(dynamic_cast<VulkanRenderer*>(renderer)->GetWindow(), &width, &height);
 		aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 		camera->Perspective(90.0f, aspectRatio, 0.5f, 20.0f);
-		camera->LookAt(Vec3(0.0f, 0.0f, -2.0f), Vec3(0.0f, 0.0f, -1.0f), Vec3(0.0f, 1.0f, 0.0f));
+		camera->LookAt(Vec3(0.0f, 0.0f, -3.0f), Vec3(0.0f, 0.0f, -1.0f), Vec3(0.0f, 1.0f, 0.0f));
 
 		break;
 
@@ -69,7 +69,6 @@ void Scene0::Update(const float deltaTime) {
 }
 
 void Scene0::Render() const {
-	Matrix4 normalMatrix = (MMath::inverse(MMath::transpose(mariosModelMatrix)));
 	switch (renderer->getRendererType()) {
 
 	case RendererType::VULKAN:
@@ -78,7 +77,7 @@ void Scene0::Render() const {
 		vRenderer->SetCameraUBO(camera->GetProjectionMatrix(), camera->GetViewMatrix());
 		vRenderer->SetLightUBO(lightData.position, lightData.color);
 		
-		vRenderer->SetPushConstants(mariosModelMatrix, normalMatrix);
+		vRenderer->SetPushConstants(mariosModelMatrix);
 		vRenderer->Render();
 		break;
 

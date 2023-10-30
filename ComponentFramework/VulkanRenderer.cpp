@@ -98,6 +98,11 @@ void VulkanRenderer::Render() {
     }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+
+    vkDeviceWaitIdle(device);
+    vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+    createCommandBuffers();
 }
 
 
@@ -1238,18 +1243,27 @@ void VulkanRenderer::createCommandBuffers() {
 
         vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+        
+
         vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
         VkBuffer vertexBuffers[] = { vertexBuffer.bufferID };
         VkDeviceSize offsets[] = { 0 };
-
-        vkCmdPushConstants(commandBuffers[i], pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &constants);
 
         vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
         vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer.bufferID, 0, VK_INDEX_TYPE_UINT32);
 
         vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
+
+        vkCmdPushConstants(
+            commandBuffers[i],
+            pipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,  // Offset
+            sizeof(constants),
+            &constants  // Pointer to the push constant data
+        );
 
         vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
@@ -1291,9 +1305,8 @@ void VulkanRenderer::SetCameraUBO(const Matrix4& projection, const Matrix4& view
     cameraUBO.proj[5] *= -1.0f;
 }
 
-void VulkanRenderer::SetPushConstants(const Matrix4& model, const Matrix4& normal) {
+void VulkanRenderer::SetPushConstants(const Matrix4& model) {
     constants.modelMatrix = model;
-    constants.normalMatrix = normal;
 }
 
 void VulkanRenderer::SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse) {

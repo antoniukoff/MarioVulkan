@@ -123,7 +123,6 @@ struct GLightsUBO {
 };
 struct PushConstant {
     Matrix4 modelMatrix;
-    Matrix4 normalMatrix;
 };
 
 class VulkanRenderer : public Renderer {
@@ -141,7 +140,7 @@ public:
     void OnDestroy();
     void Render();
     void SetCameraUBO(const Matrix4& projection, const Matrix4& view);
-    void SetPushConstants(const Matrix4& model, const Matrix4& normal);
+    void SetPushConstants(const Matrix4& model);
     void SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse);
     SDL_Window* GetWindow() { return window; }
     void CreateTextureImage();
