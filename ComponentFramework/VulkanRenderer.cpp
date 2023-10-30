@@ -98,6 +98,10 @@ void VulkanRenderer::Render() {
     }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+    vkDeviceWaitIdle(device);
+    vkFreeCommandBuffers(device, commandPool, (uint32_t)commandBuffers.size(), commandBuffers.data());
+    createCommandBuffers();
 }
 
 
@@ -1293,7 +1297,7 @@ void VulkanRenderer::SetCameraUBO(const Matrix4& projection, const Matrix4& view
 
 void VulkanRenderer::SetPushConstants(const Matrix4& model, const Matrix4& normal) {
     constants.modelMatrix = model;
-    constants.normalMatrix = normal;
+    constants.normalMatrix  = (MMath::inverse(MMath::transpose(model)));
 }
 
 void VulkanRenderer::SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse) {
