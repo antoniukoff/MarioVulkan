@@ -111,7 +111,16 @@ struct QueueFamilyIndices {
         };
     }
 
- 
+    struct IndexedBufferMemory {
+        VkBuffer vertBufferID;
+        VkDeviceMemory vertBufferMemoryID;
+        VkDeviceSize vertBufferSize;
+
+        VkBuffer indexBufferID;
+        VkDeviceMemory indexBufferMemoryID;
+        VkDeviceSize indexBufferSize;
+
+    };
 struct CameraUBO {
     Matrix4 view;
     Matrix4 proj;
@@ -123,6 +132,12 @@ struct GLightsUBO {
 };
 struct PushConstant {
     Matrix4 modelMatrix;
+    Matrix4 normalMatrix;
+};
+
+struct Pipeline {
+    VkPipelineLayout pipelineLayout;
+    VkPipeline graphicsPipelineID;
 };
 
 class VulkanRenderer : public Renderer {
@@ -144,13 +159,13 @@ public:
     void SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse);
     SDL_Window* GetWindow() { return window; }
     void CreateTextureImage();
-    void CreateGraphicsPipeline(const char* vertFile, const char* fragFile);
-    void LoadModelIndexed(const char* filename);
+    Pipeline CreateGraphicsPipeline(const char* vertFile, const char* fragFile, const char* geomFile = nullptr);
+    void LoadModelIndexed(const char* filename, IndexedBufferMemory& memoryBuffer);
+
+    std::vector<Pipeline> pipelines;
 
 private:
     const size_t MAX_FRAMES_IN_FLIGHT = 2;
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
     SDL_Event sdlEvent;
     uint32_t windowWidth;
     uint32_t windowHeight;
@@ -178,9 +193,6 @@ private:
         VkBuffer bufferID;
         VkDeviceMemory memoryBuffer;
     };
-
-    Buffer vertexBuffer;
-    Buffer indexBuffer;
 
     std::vector<Buffer> cameraBuffers;
     std::vector<Buffer> lightBuffers;
@@ -220,10 +232,10 @@ private:
     void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
         VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
    
-    void createVertexBuffer();
+    void createVertexBuffer(IndexedBufferMemory& memoryBuffer, const std::vector<Vertex>& vertices);
         /// A helper function for createVertexBuffer()
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-    void createIndexBuffer();
+    void createIndexBuffer(IndexedBufferMemory& memoryBuffer, const std::vector<uint32_t>& indices);
     void createCameraUniformBuffers();
     void createLightUniformBuffers();
     void createDescriptorPool();
@@ -231,6 +243,7 @@ private:
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void createCommandBuffers();
+    void recordCommandBuffers();
     void createSyncObjects();
     void cleanup();
     void cleanupSwapChain();
@@ -277,6 +290,7 @@ private:
     CameraUBO cameraUBO;
     PushConstant constants;
     std::array<GLightsUBO, 3> lightUBO;
+    IndexedBufferMemory marioBuffer;
     
 
     VkShaderModule createShaderModule(const std::vector<char>& code);
