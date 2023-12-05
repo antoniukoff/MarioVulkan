@@ -118,7 +118,7 @@ void SceneManager::GetEvents() {
 				break;
 
 			default:
-				BuildScene(SCENE0);
+				//BuildScene(SCENE0);
 				break;
 			}
 		}

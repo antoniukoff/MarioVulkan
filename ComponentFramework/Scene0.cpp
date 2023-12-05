@@ -10,7 +10,7 @@
 
 
 Scene0::Scene0(Renderer *renderer_): 
-	Scene(nullptr),renderer(renderer_), camera(nullptr) {
+	Scene(nullptr),renderer(renderer_), camera(nullptr), switchSets(false) {
 	light = LightActor(Vec4(26.0f, -5.0f, 10.0f, 1.0f), Vec4(0.0, 0.0f, 1.0f, 1.0f));
 	light1 = LightActor(Vec4(6.0f, 5.0f, 5.0f, 1.0f), Vec4(0.0f, 1.0f, 0.0f, 1.0f) );
 	light2 = LightActor(Vec4(-20.0f, -5.0f, 10.0f, 1.0f), Vec4(1.0f, 0.0f, 1.0f, 1.0f));
@@ -63,6 +63,14 @@ void Scene0::HandleEvents(const SDL_Event& sdlEvent) {
 		
 		}
 	}
+	if (sdlEvent.type == SDL_KEYDOWN) {
+		switch (sdlEvent.key.keysym.sym) {
+		case SDLK_t:
+			switchSets = true;
+			break;
+		}
+	}
+	
 }
 void Scene0::Update(const float deltaTime) {
 	static float elapsedTime = 10;
@@ -71,16 +79,20 @@ void Scene0::Update(const float deltaTime) {
 
 }
 
-void Scene0::Render() const {
-	switch (renderer->getRendererType()) {
+void Scene0::Render()  {
 
+	switch (renderer->getRendererType()) {
 	case RendererType::VULKAN:
 		VulkanRenderer* vRenderer;
 		vRenderer = dynamic_cast<VulkanRenderer*>(renderer);
+		if (switchSets) { 
+			vRenderer->switchDescriptors();
+			switchSets = false;
+		}
 		vRenderer->SetCameraUBO(camera->GetProjectionMatrix(), camera->GetViewMatrix());
 		vRenderer->SetLightUBO(lightData.position, lightData.color);
-		
 		vRenderer->SetPushConstants(mariosModelMatrix);
+
 		vRenderer->Render();
 		break;
 

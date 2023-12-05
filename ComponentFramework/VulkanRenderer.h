@@ -140,6 +140,13 @@ struct Pipeline {
     VkPipeline graphicsPipelineID;
 };
 
+struct Sampler {
+    VkImage image;
+    VkDeviceMemory textureImageMemory;
+    VkImageView textureImageView;
+    VkSampler textureSampler;
+};
+
 struct Model {
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorPool descriptorPool;
@@ -147,6 +154,8 @@ struct Model {
     IndexedBufferMemory buffer;
     Pipeline pipeline;
     PushConstant constants;
+    Sampler sampler;
+    int textureID;
 };
 
 class VulkanRenderer : public Renderer {
@@ -167,9 +176,11 @@ public:
     void SetPushConstants(const Matrix4& model);
     void SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse);
     SDL_Window* GetWindow() { return window; }
-    void CreateTextureImage();
+    void CreateTextureImage(VkImage& image_, VkDeviceMemory& imageMemory_, const char* filename);
     Pipeline CreateGraphicsPipeline(VkDescriptorSetLayout& descriptorSetLayout, const char* vertFile, const char* fragFile, const char* geomFile);
-    void LoadModelIndexed(const char* filename, const char* vertFile, const char* fragFile, const char* geomFile = nullptr);
+    void LoadModelIndexed(const char* filename, const char* vertFile, const char* fragFile, int textureID, const char* geomFile = nullptr);
+
+    void switchDescriptors();
 
 private:
     const size_t MAX_FRAMES_IN_FLIGHT = 2;
@@ -228,8 +239,9 @@ private:
     void createCommandPool();
     void createDepthResources();
    
-    void createTextureImageView();
-    void createTextureSampler();
+    void createTextureImageView(VkImageView& textureImageView, VkImage& image_);
+    void createTextureSampler(VkSampler& sampler);
+    void createSamplers(std::vector<std::string> filenames);
     void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
         VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
    
@@ -240,7 +252,7 @@ private:
     void createCameraUniformBuffers();
     void createLightUniformBuffers();
     void createDescriptorPool(VkDescriptorPool& descriptorPool);
-    void createDescriptorSets(const VkDescriptorPool& descriptorPool, VkDescriptorSetLayout& descriptorSetLayout, std::vector<VkDescriptorSet>& descriptorSets);
+    void createDescriptorSets(const VkDescriptorPool& descriptorPool, VkDescriptorSetLayout& descriptorSetLayout, std::vector<VkDescriptorSet>& descriptorSets, int textureID);
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void createCommandBuffers();
@@ -273,12 +285,6 @@ private:
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
-    VkImage textureImage;
-    VkDeviceMemory textureImageMemory;
-    VkImageView textureImageView;
-    VkSampler textureSampler;
-
-
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
     VkSwapchainKHR swapChain;
@@ -292,6 +298,7 @@ private:
     PushConstant constants;
     std::array<GLightsUBO, 3> lightUBO;
     std::vector<Model*> models;
+    std::vector<Sampler> samplers;
     
 
     VkShaderModule createShaderModule(const std::vector<char>& code);
