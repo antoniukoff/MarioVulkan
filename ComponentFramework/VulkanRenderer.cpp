@@ -6,8 +6,8 @@
 
 
 VulkanRenderer::VulkanRenderer(): /// Initialize all the variables
-    window(nullptr), instance(nullptr), debugMessenger(0), surface(0),commandPool(0),device(nullptr),graphicsPipeline(0),
-    windowWidth(0), windowHeight(0),presentQueue(0),graphicsQueue(nullptr),pipelineLayout(0), renderPass(0), swapChain(0),
+    window(nullptr), instance(nullptr), debugMessenger(0), surface(0),commandPool(0),device(nullptr),
+    windowWidth(0), windowHeight(0),presentQueue(0),graphicsQueue(nullptr), renderPass(0), swapChain(0),
     swapChainExtent{},swapChainImageFormat{} {   
      
  }
@@ -133,21 +133,19 @@ void VulkanRenderer::initVulkan() {
     createSwapChain();
     createImageViews();
     createRenderPass();
-    createDescriptorSetLayout();
-    pipelines.push_back(CreateGraphicsPipeline("shaders/phong.vert.spv", "shaders/phong.frag.spv"));
-    pipelines.push_back(CreateGraphicsPipeline("shaders/drawNormals.vert.spv", "shaders/drawNormals.frag.spv", "shaders/drawNormals.geom.spv"));
     createCommandPool();
     createDepthResources();
     createFramebuffers();
     CreateTextureImage();
     createTextureImageView();
     createTextureSampler();
-    LoadModelIndexed("./meshes/Mario.obj", marioBuffer);
     createCameraUniformBuffers();
     createLightUniformBuffers();
-    createDescriptorPool();
-    createDescriptorSets();
+    LoadModelIndexed("./meshes/Mario.obj", "./shaders/phong.vert.spv", "./shaders/phong.frag.spv", nullptr);
+    LoadModelIndexed("./meshes/Mario.obj", "./shaders/phong.vert.spv", "./shaders/phong.frag.spv", nullptr);
+    LoadModelIndexed("./meshes/Mario.obj", "./shaders/drawNormals.vert.spv", "./shaders/drawNormals.frag.spv", "./shaders/drawNormals.geom.spv");
     createCommandBuffers();
+    recordCommandBuffers();
     createSyncObjects();
 }
 
@@ -164,8 +162,12 @@ void VulkanRenderer::cleanupSwapChain() {
 
     vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
-    vkDestroyPipeline(device, graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+    for (auto model : models) {
+		vkDestroyPipeline(device, model->pipeline.graphicsPipelineID, nullptr);
+		vkDestroyPipelineLayout(device, model->pipeline.pipelineLayout, nullptr);
+		vkDestroyDescriptorSetLayout(device, model->descriptorSetLayout, nullptr);
+	}
+ 
     vkDestroyRenderPass(device, renderPass, nullptr);
 
     for (auto imageView : swapChainImageViews) {
@@ -182,7 +184,6 @@ void VulkanRenderer::cleanupSwapChain() {
         vkFreeMemory(device, lightBuffers[i].memoryBuffer, nullptr);
     }
 
-    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 }
 
 void VulkanRenderer::cleanup() {
@@ -194,13 +195,15 @@ void VulkanRenderer::cleanup() {
     vkDestroyImage(device, textureImage, nullptr);
     vkFreeMemory(device, textureImageMemory, nullptr);
 
-    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+    for (auto model : models) {
+		vkDestroyBuffer(device, model->buffer.vertBufferID, nullptr);
+		vkFreeMemory(device, model->buffer.vertBufferMemoryID, nullptr);
 
-    vkDestroyBuffer(device, marioBuffer.vertBufferID, nullptr);
-    vkFreeMemory(device, marioBuffer.vertBufferMemoryID, nullptr);
+		vkDestroyBuffer(device, model->buffer.indexBufferID, nullptr);
+		vkFreeMemory(device, model->buffer.indexBufferMemoryID, nullptr);
 
-    vkDestroyBuffer(device, marioBuffer.indexBufferID, nullptr);
-    vkFreeMemory(device, marioBuffer.indexBufferMemoryID, nullptr);
+        vkDestroyDescriptorSetLayout(device, model->descriptorSetLayout, nullptr);
+	}
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -243,14 +246,11 @@ void VulkanRenderer::recreateSwapChain() {
     createSwapChain();
     createImageViews();
     createRenderPass();
-    CreateGraphicsPipeline("shaders/phong.vert.spv", "shaders/phong.frag.spv");
+    LoadModelIndexed("./meshes/Mario.obj", "./shaders/phong.vert.spv", "./shaders/phong.frag.spv", nullptr);
     createDepthResources();
     createFramebuffers();
     createCameraUniformBuffers();
     createLightUniformBuffers();
-    createDescriptorPool();
-    createDescriptorSets();
-    createCommandBuffers();
 }
 
 void VulkanRenderer::createInstance() {
@@ -506,7 +506,7 @@ void VulkanRenderer::createRenderPass() {
     }
 }
 
-void VulkanRenderer::createDescriptorSetLayout() {
+void VulkanRenderer::createDescriptorSetLayout(VkDescriptorSetLayout& descriptorSetLayout) {
     VkDescriptorSetLayoutBinding cameraUboLayoutBinding{};
     cameraUboLayoutBinding.binding = 0;
     cameraUboLayoutBinding.descriptorCount = 1;
@@ -539,7 +539,8 @@ void VulkanRenderer::createDescriptorSetLayout() {
     }
 }
 
-Pipeline VulkanRenderer::CreateGraphicsPipeline(const char* vertFile, const char* fragFile, const char* geomFile/*= nullptr*/) {
+Pipeline VulkanRenderer::CreateGraphicsPipeline(VkDescriptorSetLayout& descriptorSetLayout, const char* vertFile, const char* fragFile, const char* geomFile) {
+   
     Pipeline newPipeline{};
     VkShaderModule vertShaderModule{};
     VkShaderModule fragShaderModule{};
@@ -558,6 +559,16 @@ Pipeline VulkanRenderer::CreateGraphicsPipeline(const char* vertFile, const char
     vertShaderStageInfo.pName = "main";
     shaderStages.push_back(vertShaderStageInfo);
 
+    if (geomFile) {
+        auto geomShaderCode = readFile(geomFile);
+        geomShaderModule = createShaderModule(geomShaderCode);
+        geomShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        geomShaderStageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+        geomShaderStageInfo.module = geomShaderModule;
+        geomShaderStageInfo.pName = "main";
+        shaderStages.push_back(geomShaderStageInfo);
+    }
+
     auto fragShaderCode = readFile(fragFile);
     fragShaderModule = createShaderModule(fragShaderCode);
     fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -566,15 +577,7 @@ Pipeline VulkanRenderer::CreateGraphicsPipeline(const char* vertFile, const char
     fragShaderStageInfo.pName = "main";
     shaderStages.push_back(fragShaderStageInfo);
     
-    if (geomFile) {
-        auto geomShaderCode = readFile(geomFile);
-		geomShaderModule = createShaderModule(geomShaderCode);
-		geomShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		geomShaderStageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-		geomShaderStageInfo.module = geomShaderModule;
-		geomShaderStageInfo.pName = "main";
-		shaderStages.push_back(geomShaderStageInfo);
-    }
+   
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -945,7 +948,12 @@ void VulkanRenderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t 
     endSingleTimeCommands(commandBuffer);
 }
 
-void VulkanRenderer::LoadModelIndexed(const char* filename, IndexedBufferMemory& memoryBuffer) {
+void VulkanRenderer::LoadModelIndexed(const char* filename, const char* vertFile, const char* fragFile, const char* geomFile /*= nullptr*/) {
+
+    Model* model = new Model();
+    createDescriptorSetLayout(model->descriptorSetLayout);
+    model->pipeline = CreateGraphicsPipeline(model->descriptorSetLayout, vertFile, fragFile, geomFile);
+
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<Vertex> vertices;
@@ -988,8 +996,14 @@ void VulkanRenderer::LoadModelIndexed(const char* filename, IndexedBufferMemory&
             indices.push_back(uniqueVertices[vertex]);
         }
     }
-    createVertexBuffer(memoryBuffer, vertices);
-    createIndexBuffer(memoryBuffer, indices);
+
+    createDescriptorPool(model->descriptorPool);
+    createDescriptorSets(model->descriptorPool, model->descriptorSetLayout, model->descriptorSets);
+
+    createVertexBuffer(model->buffer, vertices);
+    createIndexBuffer(model->buffer, indices);
+
+    models.push_back(model);
 }
 
 void VulkanRenderer::createVertexBuffer(IndexedBufferMemory& memoryBuffer, const std::vector<Vertex>& vertices) {
@@ -1062,7 +1076,7 @@ void VulkanRenderer::createLightUniformBuffers() {
     }
 }
 
-void VulkanRenderer::createDescriptorPool() {
+void VulkanRenderer::createDescriptorPool(VkDescriptorPool& descriptorPool) {
     std::array<VkDescriptorPoolSize, 3> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
@@ -1082,7 +1096,7 @@ void VulkanRenderer::createDescriptorPool() {
     }
 }
 
-void VulkanRenderer::createDescriptorSets() {
+void VulkanRenderer::createDescriptorSets(const VkDescriptorPool& descriptorPool, VkDescriptorSetLayout& descriptorSetLayout, std::vector<VkDescriptorSet>& descriptorSets) {
     std::vector<VkDescriptorSetLayout> layouts(swapChainImages.size(), descriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1263,25 +1277,25 @@ void VulkanRenderer::recordCommandBuffers(){
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues = clearValues.data();
 
-        VkBuffer vertexBuffers[] = { marioBuffer.vertBufferID };
-        VkDeviceSize offsets[] = { 0 };
 
         vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        for (auto& pipeline : pipelines) {
-            vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipelineID);
+        for (auto& model : models) {
+            VkDeviceSize offsets[] = { 0 };
+            VkBuffer vertexBuffers[] = { model->buffer.vertBufferID };
+            vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, model->pipeline.graphicsPipelineID);
             vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
-            vkCmdBindIndexBuffer(commandBuffers[i], marioBuffer.indexBufferID, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
+            vkCmdBindIndexBuffer(commandBuffers[i], model->buffer.indexBufferID, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, model->pipeline.pipelineLayout, 0, 1, &model->descriptorSets[i], 0, nullptr);
             vkCmdPushConstants(
                 commandBuffers[i],
-                pipeline.pipelineLayout,
+                model->pipeline.pipelineLayout,
                 VK_SHADER_STAGE_VERTEX_BIT,
                 0,  // Offset
-                sizeof(constants),
-                &constants  // Pointer to the push constant data
+                sizeof(model->constants),
+                &model->constants  // Pointer to the push constant data
             );
-            vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(marioBuffer.indexBufferSize / 4), 1, 0, 0, 0);
+            vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(model->buffer.indexBufferSize / 4), 1, 0, 0, 0);
         }
 
         vkCmdEndRenderPass(commandBuffers[i]);
@@ -1320,11 +1334,18 @@ void VulkanRenderer::SetCameraUBO(const Matrix4& projection, const Matrix4& view
     cameraUBO.proj[5] *= -1.0f;
 }
 
-void VulkanRenderer::SetPushConstants(const Matrix4& model) {
-    constants.modelMatrix = model;
-    constants.normalMatrix = MMath::inverse(MMath::transpose(model));
+void VulkanRenderer::SetPushConstants(const Matrix4& model_) {
 
-    recordCommandBuffers();
+		models[0]->constants.modelMatrix = model_;
+        models[0]->constants.normalMatrix = MMath::transpose(MMath::inverse(model_));
+        
+        models[1]->constants.modelMatrix = model_ * MMath::translate(Vec3(-4.0f, 0.0f, 0.0f));
+        models[1]->constants.normalMatrix = MMath::transpose(MMath::inverse(model_));
+
+
+        models[2]->constants.modelMatrix = model_ * MMath::translate(Vec3(-4.0f, 0.0f, 0.0f));
+        models[2]->constants.normalMatrix = MMath::transpose(MMath::inverse(model_));
+        recordCommandBuffers();
 }
 
 void VulkanRenderer::SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse) {

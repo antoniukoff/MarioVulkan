@@ -74,7 +74,7 @@ struct QueueFamilyIndices {
 
         static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
             std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-
+             
             attributeDescriptions[0].binding = 0;
             attributeDescriptions[0].location = 0;
             attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -140,6 +140,15 @@ struct Pipeline {
     VkPipeline graphicsPipelineID;
 };
 
+struct Model {
+    VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorPool descriptorPool;
+    std::vector<VkDescriptorSet> descriptorSets;
+    IndexedBufferMemory buffer;
+    Pipeline pipeline;
+    PushConstant constants;
+};
+
 class VulkanRenderer : public Renderer {
 public:
     /// C11 precautions 
@@ -159,10 +168,8 @@ public:
     void SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse);
     SDL_Window* GetWindow() { return window; }
     void CreateTextureImage();
-    Pipeline CreateGraphicsPipeline(const char* vertFile, const char* fragFile, const char* geomFile = nullptr);
-    void LoadModelIndexed(const char* filename, IndexedBufferMemory& memoryBuffer);
-
-    std::vector<Pipeline> pipelines;
+    Pipeline CreateGraphicsPipeline(VkDescriptorSetLayout& descriptorSetLayout, const char* vertFile, const char* fragFile, const char* geomFile);
+    void LoadModelIndexed(const char* filename, const char* vertFile, const char* fragFile, const char* geomFile = nullptr);
 
 private:
     const size_t MAX_FRAMES_IN_FLIGHT = 2;
@@ -176,16 +183,10 @@ private:
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device;
     VkRenderPass renderPass;
-    VkDescriptorSetLayout descriptorSetLayout;
-    VkPipelineLayout pipelineLayout;
-    VkPipeline graphicsPipeline;
-    VkDescriptorPool descriptorPool;
-    std::vector<VkDescriptorSet> descriptorSets;
 
     VkImage depthImage;
     VkDeviceMemory depthImageMemory;
     VkImageView depthImageView;
-
     VkCommandPool commandPool;
 
     //handles to the 
@@ -221,7 +222,7 @@ private:
     void updateLightUniformBuffer(uint32_t currentImage);
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     void createRenderPass();
-    void createDescriptorSetLayout();
+    void createDescriptorSetLayout(VkDescriptorSetLayout& descriptorSetLayout);
    
     void createFramebuffers();
     void createCommandPool();
@@ -238,8 +239,8 @@ private:
     void createIndexBuffer(IndexedBufferMemory& memoryBuffer, const std::vector<uint32_t>& indices);
     void createCameraUniformBuffers();
     void createLightUniformBuffers();
-    void createDescriptorPool();
-    void createDescriptorSets();
+    void createDescriptorPool(VkDescriptorPool& descriptorPool);
+    void createDescriptorSets(const VkDescriptorPool& descriptorPool, VkDescriptorSetLayout& descriptorSetLayout, std::vector<VkDescriptorSet>& descriptorSets);
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void createCommandBuffers();
@@ -290,7 +291,7 @@ private:
     CameraUBO cameraUBO;
     PushConstant constants;
     std::array<GLightsUBO, 3> lightUBO;
-    IndexedBufferMemory marioBuffer;
+    std::vector<Model*> models;
     
 
     VkShaderModule createShaderModule(const std::vector<char>& code);

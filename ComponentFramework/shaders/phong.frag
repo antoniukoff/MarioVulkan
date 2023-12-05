@@ -21,24 +21,21 @@ layout(location = 0) out vec4 fragColor;
 
 void main() { 
 
-	vec4 kTexture = texture(myTexture,texCoords);
-	vec4 ka = kTexture * 0.2;
-	vec4 colorOutput = vec4(0, 0, 0, 1);
+    vec4 kTexture = texture(myTexture, texCoords);
+    vec4 ka = kTexture;
+    vec4 colorOutput = ka * 0.5;
 
-	for(int i = 0; i < 3; i++){
-		vec4 ks = 0.5 * gLights.lights[i].diffuse;
-		float diff = max(dot(vertNormal, lightDir[i]), 0.0);
-		/// Reflection is based incedent which means a vector from the light source
-		/// not the direction to the light source
+    for(int i = 0; i < 3; i++){
+        vec4 ks = gLights.lights[i].diffuse; 
+        float diff = max(dot(vertNormal, lightDir[i]), 0.0);
 
-		vec3 reflection = normalize(reflect(-lightDir[i], vertNormal));
-		float spec = max(dot(eyeDir, reflection), 0.0);
-		if(diff > 0.0){
-			spec = pow(spec, 35);
-		}
-
-		colorOutput += ka + (diff * kTexture * gLights.lights[i].diffuse) + (spec * ks);
-	}
-
-	fragColor =   colorOutput;	
-} 
+        vec3 reflection = normalize(reflect(-lightDir[i], vertNormal));
+        float spec = max(dot(eyeDir, reflection), 0.0);
+        if(diff > 0.0){
+            spec = pow(spec, 35); 
+        }
+        colorOutput += (diff * kTexture * gLights.lights[i].diffuse) + (spec * ks);
+    }
+    fragColor = colorOutput;    
+}
+    

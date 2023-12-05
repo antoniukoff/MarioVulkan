@@ -11,15 +11,18 @@
 
 Scene0::Scene0(Renderer *renderer_): 
 	Scene(nullptr),renderer(renderer_), camera(nullptr) {
-	light = LightActor(Vec4(-6.0f, -5.0f, -3.0f, 1.0f), Vec4(0.0, 0.0f, 1.0f, 1.0f));
-	//light1 = LightActor(Vec4(-6.0f, 5.0f, -3.0f, 1.0f), Vec4(0.0f, 1.0f, 0.0f, 1.0f) );
-	light2 = LightActor(Vec4(6.0f, 5.0f, -3.0f, 1.0f), Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	light = LightActor(Vec4(26.0f, -5.0f, 10.0f, 1.0f), Vec4(0.0, 0.0f, 1.0f, 1.0f));
+	light1 = LightActor(Vec4(6.0f, 5.0f, 5.0f, 1.0f), Vec4(0.0f, 1.0f, 0.0f, 1.0f) );
+	light2 = LightActor(Vec4(-20.0f, -5.0f, 10.0f, 1.0f), Vec4(1.0f, 0.0f, 1.0f, 1.0f));
+
 	lightData.position.push_back(light.GetPosition());
-	lightData.color.push_back(light.GetColor());
 	lightData.position.push_back(light1.GetPosition());
-	lightData.color.push_back(light1.GetColor());
 	lightData.position.push_back(light2.GetPosition());
+
+	lightData.color.push_back(light.GetColor());
+	lightData.color.push_back(light1.GetColor());
 	lightData.color.push_back(light2.GetColor());
+
 	camera = new Camera();
 	Debug::Info("Created Scene0: ", __FILE__, __LINE__);
 }
@@ -38,7 +41,7 @@ bool Scene0::OnCreate() {
 		SDL_GetWindowSize(dynamic_cast<VulkanRenderer*>(renderer)->GetWindow(), &width, &height);
 		aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 		camera->Perspective(90.0f, aspectRatio, 0.5f, 20.0f);
-		camera->LookAt(Vec3(0.0f, 0.0f, 3.0f), Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f));
+		camera->LookAt(Vec3(0.0f, 0.0f, 5.0f), Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f));
 
 		break;
 

@@ -22,7 +22,7 @@ layout (binding = 1) uniform GlobalLighting {
 layout( std140, push_constant ) uniform constants
 {
 	mat4 model;
-    mat4 normal;
+    mat3 normal;
 } PushConstants;
 
 
@@ -34,10 +34,8 @@ layout (location = 5) out vec2 texCoords;
 void main() {
     texCoords = uvCoords;
 
-    //mat3 normalMatrix = mat3(inverse(transpose(PushConstants.model)));
-    //vertNormal = normalize(normalMatrix * vNormal.xyz);
     // Compute the normal matrix
-    vertNormal = normalize(mat3(PushConstants.normal) * vNormal.xyz);
+    vertNormal = normalize(PushConstants.normal * vNormal.xyz);
 
     // Compute vertex position and direction
     vec3 vertPos = vec3(ubo.view * PushConstants.model * vVertex);
