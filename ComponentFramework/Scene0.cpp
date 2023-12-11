@@ -110,9 +110,12 @@ void Scene0::Render()  {
 			vRenderer->switchDescriptors();
 			switchSets = false;
 		}
+		if (changeColor) {
+			vRenderer->SetNormalUBO(length, r, g, b);
+			changeColor = false;
+		}
 		vRenderer->SetCameraUBO(camera->GetProjectionMatrix(), camera->GetViewMatrix());
 		vRenderer->SetLightUBO(lightData.position, lightData.color);
-		vRenderer->SetNormalUBO(length, r, g, b);
 		vRenderer->SetPushConstants(mariosModelMatrix);
 		
 

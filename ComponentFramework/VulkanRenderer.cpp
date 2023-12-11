@@ -179,6 +179,9 @@ void VulkanRenderer::cleanupSwapChain() {
 
         vkDestroyBuffer(device, lightBuffers[i].bufferID, nullptr);
         vkFreeMemory(device, lightBuffers[i].memoryBuffer, nullptr);
+
+        vkDestroyBuffer(device, normalBuffers[i].bufferID, nullptr);
+        vkFreeMemory(device, normalBuffers[i].memoryBuffer, nullptr);
     }
 
 }
