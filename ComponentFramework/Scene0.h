@@ -21,6 +21,8 @@ private:
 	LightActor light1;
 	LightActor light2;
 	bool switchSets;
+	bool changeColor;
+	float length, r, g, b;
 public:
 	explicit Scene0(Renderer* renderer_);
 	virtual ~Scene0();

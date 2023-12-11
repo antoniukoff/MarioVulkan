@@ -92,7 +92,6 @@ void SceneManager::GetEvents() {
 			case SDL_SCANCODE_Q:
 				isRunning = false;
 				return;
-
 			case SDL_SCANCODE_F1:
 				///BuildScene(SCENE1);
 				break;

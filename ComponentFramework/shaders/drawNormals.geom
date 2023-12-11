@@ -15,10 +15,13 @@ layout (location = 0) in VertexStage {
     vec3 normal;
 } vs_in[];
 
-
+layout (binding = 3) uniform NormalUBO {
+	float len;
+    float r, g, b;
+} normalUBO;
 
 void main() {
-    float length  = 1;
+    float length  = normalUBO.len;
     for(int index = 0; index < 3; index++){
         gl_Position = projection * gl_in[index].gl_Position;
         EmitVertex();

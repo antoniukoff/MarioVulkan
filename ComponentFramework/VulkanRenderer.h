@@ -146,6 +146,10 @@ struct Sampler {
     VkImageView textureImageView;
     VkSampler textureSampler;
 };
+struct Normal {
+    float length;
+    float r, g, b;
+};
 
 struct Model {
     VkDescriptorSetLayout descriptorSetLayout;
@@ -175,6 +179,7 @@ public:
     void SetCameraUBO(const Matrix4& projection, const Matrix4& view);
     void SetPushConstants(const Matrix4& model);
     void SetLightUBO(const std::vector<Vec4>& position, const std::vector<Vec4>& diffuse);
+    void SetNormalUBO(float length, float r, float g, float b);
     SDL_Window* GetWindow() { return window; }
     void CreateTextureImage(VkImage& image_, VkDeviceMemory& imageMemory_, const char* filename);
     Pipeline CreateGraphicsPipeline(VkDescriptorSetLayout& descriptorSetLayout, const char* vertFile, const char* fragFile, const char* geomFile);
@@ -208,6 +213,7 @@ private:
 
     std::vector<Buffer> cameraBuffers;
     std::vector<Buffer> lightBuffers;
+    std::vector<Buffer> normalBuffers;
     std::vector<VkCommandBuffer> commandBuffers;
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
@@ -230,6 +236,7 @@ private:
     void createImageViews();
     void recreateSwapChain();
     void updateCameraUniformBuffer(uint32_t currentImage);
+    void updateNormalUniformBuffer(uint32_t currentImage);
     void updateLightUniformBuffer(uint32_t currentImage);
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     void createRenderPass();
@@ -251,6 +258,7 @@ private:
     void createIndexBuffer(IndexedBufferMemory& memoryBuffer, const std::vector<uint32_t>& indices);
     void createCameraUniformBuffers();
     void createLightUniformBuffers();
+    void createNormalUniformBuffers();
     void createDescriptorPool(VkDescriptorPool& descriptorPool);
     void createDescriptorSets(const VkDescriptorPool& descriptorPool, VkDescriptorSetLayout& descriptorSetLayout, std::vector<VkDescriptorSet>& descriptorSets, int textureID);
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
@@ -296,6 +304,7 @@ private:
     
     CameraUBO cameraUBO;
     PushConstant constants;
+    Normal normal;
     std::array<GLightsUBO, 3> lightUBO;
     std::vector<Model*> models;
     std::vector<Sampler> samplers;

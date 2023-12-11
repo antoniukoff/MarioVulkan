@@ -3,6 +3,11 @@
 
 layout(location = 0) out vec4 fragColor;
 
+layout (binding = 3) uniform NormalUBO {
+	float len;
+    float r, g, b;
+} normalUBO;
+
 void main() {
-    fragColor = vec4(0.0, 1.0, 1.0, 0.0);
+    fragColor = vec4(normalUBO.r, normalUBO.g, normalUBO.b, 1.0);
 }

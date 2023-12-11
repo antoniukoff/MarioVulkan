@@ -47,6 +47,7 @@ void VulkanRenderer::Render() {
 
     updateCameraUniformBuffer(imageIndex);
     updateLightUniformBuffer(imageIndex);
+    updateNormalUniformBuffer(imageIndex);
 
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
         vkWaitForFences(device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
@@ -137,6 +138,7 @@ void VulkanRenderer::initVulkan() {
     createSamplers({ "./textures/mario_fire.png", "./textures/mario_mime.png"});
     createCameraUniformBuffers();
     createLightUniformBuffers();
+    createNormalUniformBuffers();
     LoadModelIndexed("./meshes/Mario.obj", "./shaders/phong.vert.spv", "./shaders/phong.frag.spv", 0, nullptr);
     LoadModelIndexed("./meshes/Mario.obj", "./shaders/phong.vert.spv", "./shaders/phong.frag.spv", 1, nullptr);
     LoadModelIndexed("./meshes/Mario.obj", "./shaders/drawNormals.vert.spv", "./shaders/drawNormals.frag.spv", 1, "./shaders/drawNormals.geom.spv");
@@ -520,7 +522,14 @@ void VulkanRenderer::createDescriptorSetLayout(VkDescriptorSetLayout& descriptor
     samplerLayoutBinding.pImmutableSamplers = nullptr;
     samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    std::array<VkDescriptorSetLayoutBinding, 3> bindings = { cameraUboLayoutBinding, samplerLayoutBinding, lightUboLayoutBinding };
+    VkDescriptorSetLayoutBinding normalUboLayoutBinding{};
+    normalUboLayoutBinding.binding = 3;
+    normalUboLayoutBinding.descriptorCount = 1;
+    normalUboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    normalUboLayoutBinding.pImmutableSamplers = nullptr;
+    normalUboLayoutBinding.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 4> bindings = { cameraUboLayoutBinding, samplerLayoutBinding, lightUboLayoutBinding, normalUboLayoutBinding };
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -1098,14 +1107,27 @@ void VulkanRenderer::createLightUniformBuffers() {
     }
 }
 
+void VulkanRenderer::createNormalUniformBuffers() {
+    VkDeviceSize bufferSize = sizeof(Normal);
+
+
+    normalBuffers.resize(swapChainImages.size());
+
+    for (size_t i = 0; i < swapChainImages.size(); i++) {
+        createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, normalBuffers[i].bufferID, normalBuffers[i].memoryBuffer);
+    }
+}
+
 void VulkanRenderer::createDescriptorPool(VkDescriptorPool& descriptorPool) {
-    std::array<VkDescriptorPoolSize, 3> poolSizes{};
+    std::array<VkDescriptorPoolSize, 4> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[2].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
+    poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[3].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1142,12 +1164,17 @@ void VulkanRenderer::createDescriptorSets(const VkDescriptorPool& descriptorPool
         lightBufferInfo.offset = 0;
         lightBufferInfo.range = sizeof(lightUBO);
 
+        VkDescriptorBufferInfo normalBufferInfo{};
+        normalBufferInfo.buffer = normalBuffers[i].bufferID;
+        normalBufferInfo.offset = 0;
+        normalBufferInfo.range = sizeof(Normal);
+
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.imageView = samplers[textureID].textureImageView;
         imageInfo.sampler = samplers[textureID].textureSampler;
 
-        std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+        std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = descriptorSets[i];
@@ -1172,6 +1199,14 @@ void VulkanRenderer::createDescriptorSets(const VkDescriptorPool& descriptorPool
         descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[2].descriptorCount = 1;
         descriptorWrites[2].pImageInfo = &imageInfo;
+
+        descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[3].dstSet = descriptorSets[i];
+        descriptorWrites[3].dstBinding = 3;
+        descriptorWrites[3].dstArrayElement = 0;
+        descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[3].descriptorCount = 1;
+        descriptorWrites[3].pBufferInfo = &normalBufferInfo;
 
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
@@ -1377,6 +1412,13 @@ void VulkanRenderer::SetLightUBO(const std::vector<Vec4>& position, const std::v
     }
 }
 
+void VulkanRenderer::SetNormalUBO(float length, float r, float g, float b) {
+	normal.length = length;
+	normal.r = r;
+    normal.g = g;
+    normal.b = b;
+}
+
 
 void VulkanRenderer::updateLightUniformBuffer(uint32_t currentImage) {
     void* data;
@@ -1390,6 +1432,13 @@ void VulkanRenderer::updateCameraUniformBuffer(uint32_t currentImage) {
     vkMapMemory(device, cameraBuffers[currentImage].memoryBuffer, 0, sizeof(cameraUBO), 0, &data);
     memcpy(data, &cameraUBO, sizeof(cameraUBO));
     vkUnmapMemory(device, cameraBuffers[currentImage].memoryBuffer);
+}
+
+void VulkanRenderer::updateNormalUniformBuffer(uint32_t currentImage) {
+	void* data;
+	vkMapMemory(device, normalBuffers[currentImage].memoryBuffer, 0, sizeof(Normal), 0, &data);
+	memcpy(data, &normal, sizeof(Normal));
+	vkUnmapMemory(device, normalBuffers[currentImage].memoryBuffer);
 }
 
 VkShaderModule VulkanRenderer::createShaderModule(const std::vector<char>& code) {

@@ -68,6 +68,27 @@ void Scene0::HandleEvents(const SDL_Event& sdlEvent) {
 		case SDLK_t:
 			switchSets = true;
 			break;
+		case SDLK_w:
+			changeColor = true;
+			length += 0.05f;
+			break;
+		case SDLK_s:
+			changeColor = true;
+			length -= 0.05f;
+			break;
+		case SDLK_r:
+			changeColor = true;
+			r = (r + 0.05f > 1.0f) ? 0.0f : r + 0.05f;
+			break;
+		case SDLK_g:
+			changeColor = true;
+			g = (g + 0.05f > 1.0f) ? 0.0f : g + 0.05f;
+			break;
+		case SDLK_b:
+			changeColor = true;
+			b = (b + 0.05f > 1.0f) ? 0.0f : b + 0.05f;
+			break;
+
 		}
 	}
 	
@@ -91,7 +112,9 @@ void Scene0::Render()  {
 		}
 		vRenderer->SetCameraUBO(camera->GetProjectionMatrix(), camera->GetViewMatrix());
 		vRenderer->SetLightUBO(lightData.position, lightData.color);
+		vRenderer->SetNormalUBO(length, r, g, b);
 		vRenderer->SetPushConstants(mariosModelMatrix);
+		
 
 		vRenderer->Render();
 		break;
